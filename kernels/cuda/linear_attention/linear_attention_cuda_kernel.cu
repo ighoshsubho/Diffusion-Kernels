@@ -1,13 +1,13 @@
-#pragma once
+// linear_attention_cuda_kernel.cu
 #include <cuda_runtime.h>
-#include <cub/cub.cuh>
+#include <torch/extension.h>
 
 // Configuration parameters for the kernel
 constexpr int WARP_SIZE = 32;
 constexpr int BLOCK_SIZE = 256;
 constexpr int WARPS_PER_BLOCK = BLOCK_SIZE / WARP_SIZE;
 
-// Tiling parameters - tuned for modern GPUs
+// Tiling parameters
 constexpr int BM = 128;  // Block tile size M dimension
 constexpr int BN = 128;  // Block tile size N dimension
 constexpr int BK = 16;   // Block tile size K dimension
@@ -165,18 +165,17 @@ __global__ void linear_attention_forward_kernel(
     }
 }
 
-// Launch helper function
-template<typename scalar_t>
-void launch_linear_attention_forward(
-    const scalar_t* queries,
-    const scalar_t* keys,
-    const scalar_t* values,
-    scalar_t* output,
-    const int batch_size,
-    const int num_heads,
-    const int seq_len,
-    const int head_dim,
-    cudaStream_t stream) {
+torch::Tensor linear_attention_cuda_forward(
+    const torch::Tensor& queries,
+    const torch::Tensor& keys,
+    const torch::Tensor& values) {
+    
+    const int batch_size = queries.size(0);
+    const int num_heads = queries.size(1);
+    const int seq_len = queries.size(2);
+    const int head_dim = queries.size(3);
+    
+    auto output = torch::zeros_like(values);
     
     dim3 grid(
         (seq_len + BM - 1) / BM,
@@ -185,11 +184,18 @@ void launch_linear_attention_forward(
     );
     
     const int shared_mem_size = 
-        (BM * BK + BK * BN + BN * BM) * sizeof(scalar_t);
+        (BM * BK + BK * BN + BN * BM) * sizeof(float);
     
-    linear_attention_forward_kernel<scalar_t>
-        <<<grid, BLOCK_SIZE, shared_mem_size, stream>>>(
-        queries, keys, values, output,
-        batch_size, num_heads, seq_len, head_dim
-    );
+    AT_DISPATCH_FLOATING_TYPES(queries.scalar_type(), "linear_attention_forward", ([&] {
+        linear_attention_forward_kernel<scalar_t>
+            <<<grid, BLOCK_SIZE, shared_mem_size>>>(
+            queries.data_ptr<scalar_t>(),
+            keys.data_ptr<scalar_t>(),
+            values.data_ptr<scalar_t>(),
+            output.data_ptr<scalar_t>(),
+            batch_size, num_heads, seq_len, head_dim
+        );
+    }));
+    
+    return output;
 }
