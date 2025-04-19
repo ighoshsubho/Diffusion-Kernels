@@ -9,18 +9,6 @@ This repository contains various implementations of 3D convolution kernels for C
 3. **Tiled Implementation**: Uses shared memory tiling to reduce global memory access
 4. **cuDNN Implementation**: Uses NVIDIA's cuDNN library for comparison
 
-## Directory Structure
-
-```
-.
-├── include/          # Header files
-├── kernels/          # CUDA kernel implementations
-├── src/              # Main source files
-├── scripts/          # Python scripts for visualization
-├── Makefile          # Build system
-└── README.md         # This file
-```
-
 ## Requirements
 
 - CUDA Toolkit 11.0 or higher
@@ -29,42 +17,22 @@ This repository contains various implementations of 3D convolution kernels for C
 - GCC/G++ compatible with your CUDA version
 - Python with matplotlib (for visualization)
 
-## Building
+## Building and Running
 
-To build all kernels and benchmarks:
-
-```bash
-make all
-```
-
-To build specific implementations:
+To build the benchmark:
 
 ```bash
-make naive_conv3d     # Build naive implementation
-make coalesced_conv3d # Build coalesced implementation
-make tiled_conv3d     # Build tiled implementation
-make cudnn_conv3d     # Build cuDNN implementation
+make
 ```
 
-To build the comprehensive benchmark that compares all implementations:
-
-```bash
-make conv3d_benchmark
-```
-
-## Running Benchmarks
-
-To run the comprehensive benchmark:
+To run the benchmark:
 
 ```bash
 make run
 ```
 
-This will run all implementations with various test cases and output performance metrics.
+This will execute the benchmark for all implementations with the following test cases:
 
-### Test Cases
-
-The benchmark includes the following test cases:
 - D=H=W=64, K=3
 - D=H=W=96, K=11
 - D=H=W=256, K=7
@@ -78,7 +46,7 @@ To generate performance comparison plots:
 make plot
 ```
 
-This will create PNG files with GFLOPS and memory bandwidth comparisons.
+This will create PNG files with GFLOPS and memory bandwidth comparisons. The script requires Python with matplotlib installed.
 
 ## Implementation Details
 
@@ -101,10 +69,19 @@ The cuDNN implementation uses NVIDIA's highly optimized deep learning library. F
 ## Performance Analysis
 
 Performance metrics include:
+
 - Execution time (ms)
 - Compute throughput (GFLOPS)
 - Memory bandwidth utilization (GB/s)
 - Percentage of peak theoretical performance
+
+## Cleaning Up
+
+To clean the build files:
+
+```bash
+make clean
+```
 
 ## Contributing
 
