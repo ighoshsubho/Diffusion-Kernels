@@ -5,61 +5,45 @@ NVCC := $(CUDA_PATH)/bin/nvcc
 CUFLAGS := -O3 -arch=sm_80
 
 # Includes and libraries
-INCLUDES := -I$(CUDA_PATH)/include -I$(CUDNN_PATH)/include
+INCLUDES := -I$(CUDA_PATH)/include -I$(CUDNN_PATH)/include -Iinclude
 LDFLAGS := -L$(CUDA_PATH)/lib64 -L$(CUDNN_PATH)/lib64
 LDLIBS := -lcudart -lcudnn
 
-# Executable names
-NAIVE_EXEC := naive_conv3d
-COALESCED_EXEC := coalesced_conv3d
-TILED_EXEC := tiled_conv3d
-CUDNN_EXEC := cudnn_conv3d
+# Executable name
 BENCHMARK_EXEC := conv3d_benchmark
 
+# Source directories
+SRC_DIR := src
+KERNELS_DIR := kernels
+INCLUDE_DIR := include
+
 # Source files
-COMMON_SRC := utils.cpp
-NAIVE_SRC := naive_kernel.cu $(COMMON_SRC)
-COALESCED_SRC := coalesced_kernel.cu $(COMMON_SRC)
-TILED_SRC := tiled_kernel.cu $(COMMON_SRC)
-CUDNN_SRC := cudnn_kernel.cu $(COMMON_SRC)
-BENCHMARK_SRC := benchmark.cu $(COMMON_SRC)
+KERNEL_SOURCES := $(KERNELS_DIR)/naive_kernel.cu \
+                 $(KERNELS_DIR)/coalesced_kernel.cu \
+                 $(KERNELS_DIR)/tiled_kernel.cu \
+                 $(KERNELS_DIR)/cudnn_kernel.cu
 
-# All target: build all executables
-all: $(NAIVE_EXEC) $(COALESCED_EXEC) $(TILED_EXEC) $(CUDNN_EXEC) $(BENCHMARK_EXEC)
+SOURCES := $(SRC_DIR)/benchmark.cu \
+          $(SRC_DIR)/utils.cpp \
+          $(KERNEL_SOURCES)
 
-# Individual targets
-$(NAIVE_EXEC): naive_main.cu $(NAIVE_SRC)
+# All target: build the benchmark
+all: $(BENCHMARK_EXEC)
+
+# Main benchmark target
+$(BENCHMARK_EXEC): $(SOURCES)
 	$(NVCC) $(CUFLAGS) $(INCLUDES) $(LDFLAGS) -o $@ $^ $(LDLIBS)
-
-$(COALESCED_EXEC): coalesced_main.cu $(COALESCED_SRC)
-	$(NVCC) $(CUFLAGS) $(INCLUDES) $(LDFLAGS) -o $@ $^ $(LDLIBS)
-
-$(TILED_EXEC): tiled_main.cu $(TILED_SRC)
-	$(NVCC) $(CUFLAGS) $(INCLUDES) $(LDFLAGS) -o $@ $^ $(LDLIBS)
-
-$(CUDNN_EXEC): cudnn_main.cu $(CUDNN_SRC)
-	$(NVCC) $(CUFLAGS) $(INCLUDES) $(LDFLAGS) -o $@ $^ $(LDLIBS)
-
-$(BENCHMARK_EXEC): $(BENCHMARK_SRC) naive_kernel.cu coalesced_kernel.cu tiled_kernel.cu cudnn_kernel.cu
-	$(NVCC) $(CUFLAGS) $(INCLUDES) $(LDFLAGS) -o $@ $^ $(LDLIBS)
-
-# Object files for separate compilation (if needed)
-%.o: %.cu
-	$(NVCC) $(CUFLAGS) $(INCLUDES) -c $< -o $@
-
-%.o: %.cpp
-	$(HOST_COMPILER) -c $< -o $@
 
 # Clean rule
 clean:
-	rm -f *.o $(NAIVE_EXEC) $(COALESCED_EXEC) $(TILED_EXEC) $(CUDNN_EXEC) $(BENCHMARK_EXEC)
+	rm -f *.o $(BENCHMARK_EXEC)
 
-# Run the full benchmark
+# Run the benchmark
 run: $(BENCHMARK_EXEC)
 	./$(BENCHMARK_EXEC)
 
 # Generate plots (requires Python with matplotlib)
-plot: run
+plot: 
 	python3 scripts/plot_results.py
 
 .PHONY: all clean run plot

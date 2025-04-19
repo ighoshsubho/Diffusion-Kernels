@@ -206,7 +206,8 @@ int main(int argc, char* argv[]) {
     }
     
     // Save results for plotting
-    save_benchmark_data(all_results, kernel_names, "benchmark_results.csv");
+    std::vector<std::string> kernel_names_vec(kernel_names, kernel_names + NUM_KERNELS);
+    save_benchmark_data(all_results, kernel_names_vec, "benchmark_results.csv");
     
     // Reset device to clean up all memory
     CHECK_CUDA(cudaDeviceReset());
